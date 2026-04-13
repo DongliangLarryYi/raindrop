@@ -1,22 +1,41 @@
+import sys
 import flet as ft
-import pygame
 import threading
 import os
 
-pygame.mixer.init()
-pygame.mixer.music.load("assets/rain.mp3")
+IS_ANDROID = sys.platform == "android"
+
+if not IS_ANDROID:
+    import pygame
+    pygame.mixer.init()
+    pygame.mixer.music.load("assets/rain.mp3")
+else:
+    import flet_audio as fa
 
 def main(page: ft.Page):
     page.title = "RainDrop"
     page.bgcolor = "#0f1923"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.window.width = 360
-    page.window.height = 580
 
-    is_playing = False
+    if not IS_ANDROID:
+        page.window.width = 360
+        page.window.height = 580
+
     timer = None
-    active_minutes = None
+    timer_btns = {}
+    is_playing = False
+
+    # Android音频控件
+    if IS_ANDROID:
+        audio = fa.Audio(
+            src="assets/rain.mp3",
+            autoplay=False,
+            volume=1.0,
+            release_mode=fa.ReleaseMode.LOOP,
+        )
+        page.overlay.append(audio)
+        page.update()
 
     btn_text = ft.Text("▶  播放", size=18, color="#ffffff", weight=ft.FontWeight.W_500)
     btn = ft.Container(
@@ -29,25 +48,25 @@ def main(page: ft.Page):
     )
 
     timer_text = ft.Text("", size=13, color="#718096")
-    timer_btns = {}
 
     def stop_music():
-        nonlocal is_playing, active_minutes
-        pygame.mixer.music.stop()
+        nonlocal is_playing
+        if IS_ANDROID:
+            audio.pause()
+        else:
+            pygame.mixer.music.stop()
         is_playing = False
-        active_minutes = None
         btn_text.value = "▶  播放"
         btn.bgcolor = "#2c5282"
         timer_text.value = ""
-        for m, b in timer_btns.items():
+        for b in timer_btns.values():
             b.bgcolor = "#1e2d3d"
         page.update()
 
     def set_timer(minutes):
-        nonlocal timer, active_minutes
+        nonlocal timer
         if timer:
             timer.cancel()
-        active_minutes = minutes
         timer = threading.Timer(minutes * 60, stop_music)
         timer.start()
         timer_text.value = f"⏱  将在 {minutes} 分钟后停止"
@@ -55,31 +74,32 @@ def main(page: ft.Page):
             b.bgcolor = "#2c5282" if m == minutes else "#1e2d3d"
         page.update()
 
-    def toggle(e):
+    async def toggle(e):
         nonlocal is_playing
         if is_playing:
-            pygame.mixer.music.pause()
+            if IS_ANDROID:
+                await audio.pause()
+            else:
+                pygame.mixer.music.pause()
             btn_text.value = "▶  播放"
             btn.bgcolor = "#2c5282"
         else:
-            if not pygame.mixer.music.get_busy():
-                pygame.mixer.music.play(-1)
+            if IS_ANDROID:
+                await audio.play()
             else:
-                pygame.mixer.music.unpause()
+                if not pygame.mixer.music.get_busy():
+                    pygame.mixer.music.play(-1)
+                else:
+                    pygame.mixer.music.unpause()
             btn_text.value = "⏸  暂停"
             btn.bgcolor = "#1a4a7a"
         is_playing = not is_playing
         page.update()
 
-    def on_disconnect(e):
-        if timer:
-            timer.cancel()
-        pygame.mixer.music.stop()
-        pygame.mixer.quit()
-        os._exit(0)
-
-    page.window.on_event = lambda e: on_disconnect(e) if e.data == "close" else None
     btn.on_click = toggle
+
+    if not IS_ANDROID:
+        page.window.on_event = lambda e: os._exit(0) if e.data == "close" else None
 
     def make_timer_btn(label, minutes):
         b = ft.Container(

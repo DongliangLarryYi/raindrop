@@ -1,0 +1,12 @@
+[project]
+name = "raindrop"
+version = "1.0.0"
+description = "A simple rain white noise app"
+dependencies = [
+    "flet",
+    "flet-audio",
+]
+
+[tool.flet]
+app_name = "RainDrop"
+org = "com.larryyi.raindrop"
