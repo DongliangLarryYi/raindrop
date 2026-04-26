@@ -1,16 +1,15 @@
-import sys
 import flet as ft
 import threading
 import os
 
-IS_ANDROID = sys.platform == "android"
-
-if not IS_ANDROID:
+try:
     import pygame
     pygame.mixer.init()
     pygame.mixer.music.load("assets/rain.mp3")
-else:
+    IS_ANDROID = False
+except ImportError:
     import flet_audio as fa
+    IS_ANDROID = True
 
 def main(page: ft.Page):
     page.title = "RainDrop"
@@ -26,7 +25,6 @@ def main(page: ft.Page):
     timer_btns = {}
     is_playing = False
 
-    # Android音频控件
     if IS_ANDROID:
         audio = fa.Audio(
             src="assets/rain.mp3",

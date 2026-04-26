@@ -10,3 +10,6 @@ dependencies = [
 [tool.flet]
 app_name = "RainDrop"
 org = "com.larryyi.raindrop"
+
+[tool.flet.flutter]
+dependencies = ["flet_audio"]
